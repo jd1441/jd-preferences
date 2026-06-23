@@ -1,27 +1,30 @@
 // Cloudflare Pages — advanced-mode Worker (single file at repo root).
 // Serves the static preferences page and handles POST /api/preferences,
-// which updates the contact in Mailchimp via the Marketing API.
-// The API key lives ONLY in the MAILCHIMP_API_KEY env var, never in code.
+// updating the contact in Mailchimp via the Marketing API.
+//
+// The ONLY required env var is MAILCHIMP_API_KEY (a secret). The audience
+// and group IDs are discovered automatically from the account by name, so
+// no other configuration is needed. MAILCHIMP_AUDIENCE_ID may optionally be
+// set to pin a specific audience.
 
-// Maps the form's checkbox keys to the env vars holding each Mailchimp group (interest) ID.
-const GROUP_ENV = {
-  the_daily: "MAILCHIMP_GROUP_THE_DAILY",
-  jing_daily_pro: "MAILCHIMP_GROUP_JING_DAILY_PRO",
-  jing_beauty: "MAILCHIMP_GROUP_JING_BEAUTY",
-  cars_culture: "MAILCHIMP_GROUP_CARS_CULTURE",
-  sunday_roundup: "MAILCHIMP_GROUP_SUNDAY_ROUNDUP",
+const AUDIENCE_NAME = "Jing Daily Subscriber List";
+
+// Form checkbox key -> the Mailchimp group name to match, and whether to
+// disambiguate duplicate names by picking the one with the most subscribers
+// (used for "The Daily", which exists in more than one category).
+const GROUP_TARGETS = {
+  the_daily: { name: "The Daily", byMaxSubs: true },
+  jing_daily_pro: { name: "Jing Daily Pro", byMaxSubs: false },
+  sunday_roundup: { name: "The Sunday Roundup", byMaxSubs: false },
 };
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/preferences") {
-      if (request.method !== "POST") {
-        return json({ error: "Method not allowed." }, 405);
-      }
+      if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
       return handlePreferences(request, env);
     }
-    // Everything else: serve the static assets (index.html, etc.).
     return env.ASSETS.fetch(request);
   },
 };
@@ -33,6 +36,56 @@ function json(data, status = 200) {
   });
 }
 
+// Cached discovery result, reused for the life of the isolate.
+let discoveryCache = null;
+
+async function discover(apiKey, audienceOverride) {
+  if (discoveryCache) return discoveryCache;
+
+  const dc = apiKey.split("-").pop();
+  const base = "https://" + dc + ".api.mailchimp.com/3.0";
+  const headers = { Authorization: "Basic " + btoa("any:" + apiKey) };
+  const getJson = async (path) => {
+    const r = await fetch(base + path, { headers });
+    if (!r.ok) throw new Error("Mailchimp API " + r.status + " for " + path);
+    return r.json();
+  };
+
+  // Find the audience (list).
+  let listId = audienceOverride || null;
+  if (!listId) {
+    const lists = (await getJson("/lists?count=200&fields=lists.id,lists.name")).lists || [];
+    const match = lists.find((l) => l.name === AUDIENCE_NAME) || lists[0];
+    if (!match) throw new Error("No audience found.");
+    listId = match.id;
+  }
+
+  // Gather every interest (group) across all categories.
+  const cats = (await getJson("/lists/" + listId + "/interest-categories?count=200")).categories || [];
+  let interests = [];
+  for (const c of cats) {
+    const r = await getJson("/lists/" + listId + "/interest-categories/" + c.id + "/interests?count=200");
+    interests = interests.concat(r.interests || []);
+  }
+
+  const pick = (name, byMaxSubs) => {
+    const matches = interests.filter(
+      (i) => (i.name || "").trim().toLowerCase() === name.toLowerCase()
+    );
+    if (!matches.length) return null;
+    if (byMaxSubs) matches.sort((a, b) => (b.subscriber_count || 0) - (a.subscriber_count || 0));
+    return matches[0].id;
+  };
+
+  const groups = {};
+  for (const key of Object.keys(GROUP_TARGETS)) {
+    groups[key] = pick(GROUP_TARGETS[key].name, GROUP_TARGETS[key].byMaxSubs);
+  }
+
+  discoveryCache = { listId, groups };
+  return discoveryCache;
+}
+
 async function handlePreferences(request, env) {
   let body;
   try {
@@ -42,7 +95,7 @@ async function handlePreferences(request, env) {
   }
 
   const email = (body.email || "").trim().toLowerCase();
-  const groups = body.groups || {};
+  const selected = body.groups || {};
   const unsubscribe = body.unsubscribe === true;
 
   if (!email || email.indexOf("@") === -1) {
@@ -50,38 +103,30 @@ async function handlePreferences(request, env) {
   }
 
   const apiKey = env.MAILCHIMP_API_KEY;
-  const audienceId = env.MAILCHIMP_AUDIENCE_ID;
-  if (!apiKey || !audienceId) {
+  if (!apiKey || apiKey.indexOf("-") === -1) {
     return json({ error: "Server is not configured." }, 500);
   }
 
-  // Mailchimp data center is the suffix of the API key, e.g. "...-us1".
-  const dc = apiKey.split("-")[1];
-  if (!dc) {
-    return json({ error: "Server is not configured correctly." }, 500);
+  let info;
+  try {
+    info = await discover(apiKey, env.MAILCHIMP_AUDIENCE_ID);
+  } catch (e) {
+    return json({ error: "Could not read your account configuration." }, 502);
   }
 
-  // Build the interests map { groupId: true/false } from the submitted checkboxes.
+  // Build { interestId: true/false } for the groups we manage.
   const interests = {};
-  for (const key of Object.keys(GROUP_ENV)) {
-    const groupId = env[GROUP_ENV[key]];
-    if (groupId) {
-      interests[groupId] = groups[key] === true && !unsubscribe;
-    }
+  for (const key of Object.keys(GROUP_TARGETS)) {
+    const id = info.groups[key];
+    if (id) interests[id] = selected[key] === true && !unsubscribe;
   }
 
-  const payload = {
-    email_address: email,
-    status_if_new: "subscribed",
-    interests,
-  };
-  if (unsubscribe) {
-    payload.status = "unsubscribed";
-  }
+  const payload = { email_address: email, status_if_new: "subscribed", interests };
+  if (unsubscribe) payload.status = "unsubscribed";
 
-  const subscriberHash = md5(email);
+  const dc = apiKey.split("-").pop();
   const apiUrl =
-    "https://" + dc + ".api.mailchimp.com/3.0/lists/" + audienceId + "/members/" + subscriberHash;
+    "https://" + dc + ".api.mailchimp.com/3.0/lists/" + info.listId + "/members/" + md5(email);
 
   let mcRes;
   try {
@@ -89,8 +134,7 @@ async function handlePreferences(request, env) {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        // HTTP Basic auth: any username, API key as the password.
-        Authorization: "Basic " + btoa("anystring:" + apiKey),
+        Authorization: "Basic " + btoa("any:" + apiKey),
       },
       body: JSON.stringify(payload),
     });
