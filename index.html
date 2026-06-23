@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Email preferences — Jing Daily</title>
+<style>
+  :root {
+    --jd-yellow: #FFFF7F;
+    --jd-black: #000000;
+    --jd-grey: #555555;
+    --jd-border: #d7d7d7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #F8F7F0;
+    color: var(--jd-black);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  .brand {
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+    margin: 0 0 4px;
+  }
+  .brand .accent {
+    background: var(--jd-yellow);
+    padding: 0 6px;
+  }
+  h1 {
+    font-size: 30px;
+    margin: 28px 0 8px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .intro {
+    color: var(--jd-black);
+    margin: 0 0 28px;
+    font-size: 16px;
+  }
+  .email-box {
+    border: 2px solid var(--jd-black);
+    border-left: 8px solid var(--jd-yellow);
+    padding: 12px 16px;
+    margin-bottom: 32px;
+    font-size: 15px;
+    word-break: break-all;
+  }
+  .email-box .label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--jd-grey);
+    margin-bottom: 2px;
+  }
+  .email-box strong { font-weight: 700; }
+  fieldset { border: 0; margin: 0; padding: 0; }
+  .option {
+    display: flex;
+    gap: 14px;
+    padding: 18px 0;
+    border-top: 1px solid var(--jd-border);
+  }
+  .option:last-of-type { border-bottom: 1px solid var(--jd-border); }
+  .option input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    margin: 2px 0 0;
+    border: 2px solid var(--jd-black);
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+  }
+  .option input[type="checkbox"]:checked {
+    background: var(--jd-yellow);
+  }
+  .option input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 1px;
+    width: 7px;
+    height: 13px;
+    border: solid var(--jd-black);
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+  }
+  .option label { cursor: pointer; }
+  .option .name { font-weight: 700; font-size: 16px; display: block; }
+  .option .desc { color: var(--jd-grey); font-size: 14px; margin-top: 2px; }
+  .btn {
+    margin-top: 32px;
+    background: var(--jd-yellow);
+    color: var(--jd-black);
+    border: 2px solid var(--jd-black);
+    font-weight: 800;
+    font-size: 16px;
+    padding: 14px 28px;
+    cursor: pointer;
+    width: 100%;
+  }
+  .btn:hover { background: #000; color: var(--jd-yellow); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .unsub {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 14px;
+  }
+  .unsub a {
+    color: var(--jd-grey);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .unsub a:hover { color: var(--jd-black); }
+  .status {
+    margin-top: 24px;
+    padding: 14px 16px;
+    font-size: 15px;
+    display: none;
+  }
+  .status.ok { display: block; background: var(--jd-yellow); border: 2px solid var(--jd-black); }
+  .status.err { display: block; background: #fff; border: 2px solid #c0392b; color: #c0392b; }
+  .missing-email {
+    background: #fff; border: 2px solid #c0392b; color: #c0392b;
+    padding: 12px 16px; margin-bottom: 24px; font-size: 14px; display: none;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">Jing<span class="accent">Daily</span></div>
+
+    <h1>Email preferences</h1>
+    <p class="intro">Select the briefings you wish to receive. Updates take effect from your next send.</p>
+
+    <div id="missingEmail" class="missing-email">
+      We couldn't read your email address from this link. Please use the preferences link from one of our emails.
+    </div>
+
+    <div class="email-box">
+      <span class="label">Your email</span>
+      <strong id="emailDisplay">—</strong>
+    </div>
+
+    <form id="prefForm">
+      <fieldset>
+        <div class="option">
+          <input type="checkbox" id="the_daily" name="the_daily" />
+          <label for="the_daily">
+            <span class="name">The Daily</span>
+            <span class="desc">Luxury, fashion, and consumer intelligence across China and APAC. Daily.</span>
+          </label>
+        </div>
+        <div class="option">
+          <input type="checkbox" id="jing_daily_pro" name="jing_daily_pro" />
+          <label for="jing_daily_pro">
+            <span class="name">Jing Daily Pro</span>
+            <span class="desc">Analysis, market data, and the week's reports. Saturdays.</span>
+          </label>
+        </div>
+        <div class="option">
+          <input type="checkbox" id="jing_beauty" name="jing_beauty" />
+          <label for="jing_beauty">
+            <span class="name">Jing Beauty</span>
+            <span class="desc">Beauty and wellness intelligence for the China and APAC market.</span>
+          </label>
+        </div>
+        <div class="option">
+          <input type="checkbox" id="cars_culture" name="cars_culture" />
+          <label for="cars_culture">
+            <span class="name">Cars &amp; Culture</span>
+            <span class="desc">Automotive, design, and collecting.</span>
+          </label>
+        </div>
+        <div class="option">
+          <input type="checkbox" id="sunday_roundup" name="sunday_roundup" />
+          <label for="sunday_roundup">
+            <span class="name">The Sunday Roundup</span>
+            <span class="desc">A weekly digest of the most consequential stories.</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="btn" id="saveBtn">Save preferences</button>
+    </form>
+
+    <div id="status" class="status"></div>
+
+    <p class="unsub">
+      <a id="unsubLink">Unsubscribe from all Jing Daily emails</a>
+    </p>
+  </div>
+
+<script>
+  // Read the contact's email from the URL (?email=... or ?e=...)
+  var params = new URLSearchParams(window.location.search);
+  var email = (params.get("email") || params.get("e") || "").trim();
+
+  var emailDisplay = document.getElementById("emailDisplay");
+  var missingEmail = document.getElementById("missingEmail");
+  var saveBtn = document.getElementById("saveBtn");
+  var statusEl = document.getElementById("status");
+
+  if (email) {
+    emailDisplay.textContent = email;
+  } else {
+    emailDisplay.textContent = "(unknown)";
+    missingEmail.style.display = "block";
+    saveBtn.disabled = true;
+  }
+
+  var GROUP_KEYS = ["the_daily", "jing_daily_pro", "jing_beauty", "cars_culture", "sunday_roundup"];
+
+  function collectGroups() {
+    var groups = {};
+    GROUP_KEYS.forEach(function (k) {
+      groups[k] = document.getElementById(k).checked;
+    });
+    return groups;
+  }
+
+  function showStatus(ok, msg) {
+    statusEl.textContent = msg;
+    statusEl.className = "status " + (ok ? "ok" : "err");
+  }
+
+  function submit(payload, btn) {
+    var original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Saving…";
+    fetch("/api/preferences", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (res.ok) {
+          showStatus(true, payload.unsubscribe
+            ? "You've been unsubscribed from all Jing Daily emails."
+            : "Your preferences have been saved.");
+        } else {
+          showStatus(false, (res.d && res.d.error) ? res.d.error : "Something went wrong. Please try again.");
+        }
+      })
+      .catch(function () { showStatus(false, "Network error. Please try again."); })
+      .finally(function () { btn.disabled = false; btn.textContent = original; });
+  }
+
+  document.getElementById("prefForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!email) return;
+    submit({ email: email, groups: collectGroups(), unsubscribe: false }, saveBtn);
+  });
+
+  document.getElementById("unsubLink").addEventListener("click", function () {
+    if (!email) { missingEmail.style.display = "block"; return; }
+    if (!confirm("Unsubscribe " + email + " from all Jing Daily emails?")) return;
+    submit({ email: email, groups: collectGroups(), unsubscribe: true }, saveBtn);
+  });
+</script>
+</body>
+</html>
