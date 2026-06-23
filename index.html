@@ -100,8 +100,14 @@
   .option label { cursor: pointer; }
   .option .name { font-weight: 700; font-size: 16px; display: block; }
   .option .desc { color: var(--jd-grey); font-size: 14px; margin-top: 2px; }
-  .btn {
+  .actions {
     margin-top: 32px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    flex: 1 1 200px;
     background: var(--jd-yellow);
     color: var(--jd-black);
     border: 2px solid var(--jd-black);
@@ -109,10 +115,11 @@
     font-size: 16px;
     padding: 14px 28px;
     cursor: pointer;
-    width: 100%;
   }
   .btn:hover { background: #000; color: var(--jd-yellow); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: #fff; color: var(--jd-black); }
+  .btn-secondary:hover { background: var(--jd-black); color: #fff; }
   .unsub {
     margin-top: 40px;
     text-align: center;
@@ -140,7 +147,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="brand">Jing<span class="accent">Daily</span></div>
+    <div class="brand">Jing Daily</div>
 
     <h1>Email preferences</h1>
     <p class="intro">Select the briefings you wish to receive. Updates take effect from your next send.</p>
@@ -171,20 +178,6 @@
           </label>
         </div>
         <div class="option">
-          <input type="checkbox" id="jing_beauty" name="jing_beauty" />
-          <label for="jing_beauty">
-            <span class="name">Jing Beauty</span>
-            <span class="desc">Beauty and wellness intelligence for the China and APAC market.</span>
-          </label>
-        </div>
-        <div class="option">
-          <input type="checkbox" id="cars_culture" name="cars_culture" />
-          <label for="cars_culture">
-            <span class="name">Cars &amp; Culture</span>
-            <span class="desc">Automotive, design, and collecting.</span>
-          </label>
-        </div>
-        <div class="option">
           <input type="checkbox" id="sunday_roundup" name="sunday_roundup" />
           <label for="sunday_roundup">
             <span class="name">The Sunday Roundup</span>
@@ -193,14 +186,13 @@
         </div>
       </fieldset>
 
-      <button type="submit" class="btn" id="saveBtn">Save preferences</button>
+      <div class="actions">
+        <button type="submit" class="btn" id="saveBtn">Save preferences</button>
+        <button type="button" class="btn btn-secondary" id="unsubBtn">Unsubscribe from all Jing Daily emails</button>
+      </div>
     </form>
 
     <div id="status" class="status"></div>
-
-    <p class="unsub">
-      <a id="unsubLink">Unsubscribe from all Jing Daily emails</a>
-    </p>
   </div>
 
 <script>
@@ -211,6 +203,7 @@
   var emailDisplay = document.getElementById("emailDisplay");
   var missingEmail = document.getElementById("missingEmail");
   var saveBtn = document.getElementById("saveBtn");
+  var unsubBtn = document.getElementById("unsubBtn");
   var statusEl = document.getElementById("status");
 
   if (email) {
@@ -219,9 +212,10 @@
     emailDisplay.textContent = "(unknown)";
     missingEmail.style.display = "block";
     saveBtn.disabled = true;
+    unsubBtn.disabled = true;
   }
 
-  var GROUP_KEYS = ["the_daily", "jing_daily_pro", "jing_beauty", "cars_culture", "sunday_roundup"];
+  var GROUP_KEYS = ["the_daily", "jing_daily_pro", "sunday_roundup"];
 
   function collectGroups() {
     var groups = {};
@@ -265,10 +259,10 @@
     submit({ email: email, groups: collectGroups(), unsubscribe: false }, saveBtn);
   });
 
-  document.getElementById("unsubLink").addEventListener("click", function () {
+  unsubBtn.addEventListener("click", function () {
     if (!email) { missingEmail.style.display = "block"; return; }
     if (!confirm("Unsubscribe " + email + " from all Jing Daily emails?")) return;
-    submit({ email: email, groups: collectGroups(), unsubscribe: true }, saveBtn);
+    submit({ email: email, groups: collectGroups(), unsubscribe: true }, unsubBtn);
   });
 </script>
 </body>
