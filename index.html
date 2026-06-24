@@ -152,7 +152,7 @@
     <div class="brand">Jing Daily</div>
 
     <h1>Email preferences</h1>
-    <p class="intro">Select the briefings you wish to receive. Updates take effect from the next send.</p>
+    <p class="intro">Too many emails? Switch to just The Sunday Roundup — our weekly digest of the most consequential stories. Changes take effect from the next send.</p>
 
     <div id="missingEmail" class="missing-email">
       We couldn't read your email address from this link. Please use the preferences link from one of our emails.
@@ -170,13 +170,6 @@
           <label for="the_daily">
             <span class="name">The Daily</span>
             <span class="desc">Luxury, fashion, and consumer intelligence across China and APAC. Daily.</span>
-          </label>
-        </div>
-        <div class="option">
-          <input type="checkbox" id="jing_daily_pro" name="jing_daily_pro" />
-          <label for="jing_daily_pro">
-            <span class="name">Jing Daily Pro</span>
-            <span class="desc">Analysis, market data, and the week's reports. Saturdays.</span>
           </label>
         </div>
         <div class="option">
@@ -228,7 +221,7 @@
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d && d.groups) {
-          ["the_daily", "jing_daily_pro", "sunday_roundup"].forEach(function (k) {
+          ["the_daily", "sunday_roundup"].forEach(function (k) {
             var el = document.getElementById(k);
             if (el) el.checked = d.groups[k] === true;
           });
@@ -241,7 +234,7 @@
       });
   }
 
-  var GROUP_KEYS = ["the_daily", "jing_daily_pro", "sunday_roundup"];
+  var GROUP_KEYS = ["the_daily", "sunday_roundup"];
 
   function collectGroups() {
     var groups = {};
