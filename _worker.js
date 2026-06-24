@@ -22,8 +22,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/preferences") {
-      if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
-      return handlePreferences(request, env);
+      if (request.method === "GET") return handleGet(request, env);
+      if (request.method === "POST") return handlePreferences(request, env);
+      return json({ error: "Method not allowed." }, 405);
     }
     return env.ASSETS.fetch(request);
   },
@@ -84,6 +85,58 @@ async function discover(apiKey, audienceOverride) {
 
   discoveryCache = { listId, groups };
   return discoveryCache;
+}
+
+// GET /api/preferences?email=... -> the contact's current group membership,
+// so the page can pre-check the boxes to reflect what they're already on.
+async function handleGet(request, env) {
+  const url = new URL(request.url);
+  const email = (url.searchParams.get("email") || "").trim().toLowerCase();
+  const groups = { the_daily: false, jing_daily_pro: false, sunday_roundup: false };
+
+  if (!email || email.indexOf("@") === -1) {
+    return json({ error: "A valid email address is required." }, 400);
+  }
+
+  const apiKey = env.MAILCHIMP_API_KEY;
+  if (!apiKey || apiKey.indexOf("-") === -1) {
+    return json({ error: "Server is not configured." }, 500);
+  }
+
+  let info;
+  try {
+    info = await discover(apiKey, env.MAILCHIMP_AUDIENCE_ID);
+  } catch (e) {
+    return json({ error: "Could not read your account configuration." }, 502);
+  }
+
+  const dc = apiKey.split("-").pop();
+  const apiUrl =
+    "https://" + dc + ".api.mailchimp.com/3.0/lists/" + info.listId + "/members/" + md5(email);
+
+  let res;
+  try {
+    res = await fetch(apiUrl, {
+      headers: { Authorization: "Basic " + btoa("any:" + apiKey) },
+    });
+  } catch (e) {
+    return json({ error: "Could not reach the email service." }, 502);
+  }
+
+  if (res.status === 404) {
+    return json({ exists: false, status: null, groups });
+  }
+  if (!res.ok) {
+    return json({ error: "Lookup failed." }, 502);
+  }
+
+  const member = await res.json();
+  const memberInterests = member.interests || {};
+  for (const key of Object.keys(GROUP_TARGETS)) {
+    const id = info.groups[key];
+    if (id) groups[key] = memberInterests[id] === true;
+  }
+  return json({ exists: true, status: member.status, groups });
 }
 
 async function handlePreferences(request, env) {

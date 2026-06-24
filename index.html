@@ -210,11 +210,34 @@
 
   if (email) {
     emailDisplay.textContent = email;
+    loadCurrentPreferences();
   } else {
     emailDisplay.textContent = "(unknown)";
     missingEmail.style.display = "block";
     saveBtn.disabled = true;
     unsubBtn.disabled = true;
+  }
+
+  // Load the contact's current subscriptions so the boxes reflect reality.
+  function loadCurrentPreferences() {
+    saveBtn.disabled = true;
+    var originalText = saveBtn.textContent;
+    saveBtn.textContent = "Loading…";
+    fetch("/api/preferences?email=" + encodeURIComponent(email))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.groups) {
+          ["the_daily", "jing_daily_pro", "sunday_roundup"].forEach(function (k) {
+            var el = document.getElementById(k);
+            if (el) el.checked = d.groups[k] === true;
+          });
+        }
+      })
+      .catch(function () {})
+      .finally(function () {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+      });
   }
 
   var GROUP_KEYS = ["the_daily", "jing_daily_pro", "sunday_roundup"];
