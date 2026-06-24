@@ -107,7 +107,8 @@
     flex-wrap: wrap;
   }
   .btn {
-    flex: 1 1 200px;
+    width: 100%;
+    margin-top: 32px;
     background: var(--jd-yellow);
     color: var(--jd-black);
     border: 2px solid var(--jd-black);
@@ -150,7 +151,7 @@
     <div class="brand">Jing Daily</div>
 
     <h1>Email preferences</h1>
-    <p class="intro">Select the briefings you wish to receive. Updates take effect from your next send.</p>
+    <p class="intro">Select the briefings you wish to receive. Updates take effect from the next send.</p>
 
     <div id="missingEmail" class="missing-email">
       We couldn't read your email address from this link. Please use the preferences link from one of our emails.
@@ -186,13 +187,14 @@
         </div>
       </fieldset>
 
-      <div class="actions">
-        <button type="submit" class="btn" id="saveBtn">Save preferences</button>
-        <button type="button" class="btn btn-secondary" id="unsubBtn">Unsubscribe from all Jing Daily emails</button>
-      </div>
+      <button type="submit" class="btn" id="saveBtn">Save preferences</button>
     </form>
 
     <div id="status" class="status"></div>
+
+    <p class="unsub">
+      <a id="unsubBtn">Unsubscribe from all Jing Daily emails</a>
+    </p>
   </div>
 
 <script>
